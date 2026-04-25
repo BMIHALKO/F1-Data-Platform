@@ -1,0 +1,21 @@
+create table if not exists staging.stg_results (
+    season number,
+    round_number number,
+    race_name string,
+    race_date date,
+    car_number string,
+    finishing_position number,
+    position_text string,
+    points number(5,2),
+    driver_id string,
+    constructor_id string,
+    grid_position number,
+    laps_completed number,
+    race_status string,
+    finish_time_millis number,
+    finish_time string,
+    fastest_lap_rank number,
+    fastest_lap_number number,
+    fastest_lap_time string,
+    ingested_at timestamp_ntz default current_timestamp()
+);
