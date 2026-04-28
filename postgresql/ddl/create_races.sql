@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS staging.races (
+    season INTEGER,
+    round_number INTEGER,
+    race_name TEXT,
+    race_date DATE,
+    race_time TEXT,
+    circuit_id TEXT,
+    fp1_date DATE,
+    fp1_time TEXT,
+    fp2_date DATE,
+    fp2_time TEXT,
+    fp3_date DATE,
+    fp3_time TEXT,
+    qualifying_date DATE,
+    qualifying_time TEXT,
+    sprint_date DATE,
+    sprint_time TEXT,
+    sprint_qualifying_date DATE,
+    sprint_qualifying_time TEXT,
+    profile_url TEXT,
+    ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS staging.results (
+    season INTEGER,
+    round_number INTEGER,
+    race_name TEXT,
+    race_date DATE,
+    car_number TEXT,
+    finishing_position INTEGER,
+    position_text TEXT,
+    points NUMERIC(5,2),
+    driver_id TEXT,
+    constructor_id TEXT,
+    grid_position INTEGER,
+    laps_completed INTEGER,
+    race_status TEXT,
+    finish_time_millis BIGINT,
+    finish_time TEXT,
+    fastest_lap_rank INTEGER,
+    fastest_lap_number INTEGER,
+    fastest_lap_time TEXT,
+    ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
