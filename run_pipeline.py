@@ -1,12 +1,14 @@
 import time
+import pandas as pd
 
 from ingestion.extract.extract_results import extract_results
-from ingestion.load.postgres_loader import load_dataframe_to_table
+from ingestion.extract.extract_races import extract_races_for_seasons
+from ingestion.extract.extract_drivers import extract_drivers
 from ingestion.extract.jolpica_client import get_available_rounds, get_available_seasons
+from ingestion.load.postgres_loader import load_dataframe_to_table
 
-
-def main():
-    seasons = get_available_seasons(start_year=2023)
+def load_results(start_year = 2010):
+    seasons = get_available_seasons(start_year = start_year)
 
     inserted_total = 0
     skipped_existing = 0
@@ -29,19 +31,59 @@ def main():
 
             if rows_loaded == 0:
                 skipped_existing += 1
+            
             else:
                 season_rows += rows_loaded
                 season_rounds_loaded += 1
                 inserted_total += rows_loaded
-
+        
             time.sleep(2)
-
-        print(f"{season} season loaded: {season_rows} rows across {season_rounds_loaded} rounds.")
-
-    print("\nPipeline summary")
+        
+        print(f"{season} results loaded: {season_rows} row across {season_rounds_loaded} rounds.")
+    
+    print("\nResults Summary:")
     print(f"Rows inserted: {inserted_total}")
     print(f"Rounds skipped - already loaded: {skipped_existing}")
     print(f"Rounds skipped - no results available: {skipped_empty}")
+
+def load_races(start_year = 2010):
+    seasons = get_available_seasons(start_year = start_year)
+
+    races = extract_races_for_seasons(seasons)
+    races_df = pd.DataFrame(races)
+
+    rows_loaded = load_dataframe_to_table(races_df, "staging", "races")
+
+    print("\nRaces Summary:")
+    print(f"Seasons checked: {seasons}")
+    print(f"Race records extracted: {len(races)}")
+    print(f"Race records inserted: {rows_loaded}")
+
+def load_drivers():
+    drivers = extract_drivers()
+    drivers_df = pd.DataFrame(drivers)
+
+    rows_loaded = load_dataframe_to_table(drivers_df, "staging", "drivers")
+
+    print("\nDrivers Summary:")
+    print(f"Driver records extracted: {len(drivers)}")
+    print(f"Driver records inserted: {rows_loaded}")
+
+def load_constructors():
+    pass
+
+def load_circuits():
+    pass
+
+def main():
+    """
+    Run only the loads you want active right now
+    
+    load_results(start_year = 2010)
+
+    load_races(start_year = 2010)
+    """
+    load_drivers()
 
 
 if __name__ == "__main__":
