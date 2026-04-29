@@ -4,6 +4,10 @@ import pandas as pd
 from ingestion.extract.extract_results import extract_results
 from ingestion.extract.extract_races import extract_races_for_seasons
 from ingestion.extract.extract_drivers import extract_drivers
+from ingestion.extract.extract_constructors import extract_constructors
+from ingestion.extract.extract_circuits import extract_cicuits
+
+
 from ingestion.extract.jolpica_client import get_available_rounds, get_available_seasons
 from ingestion.load.postgres_loader import load_dataframe_to_table
 
@@ -70,10 +74,24 @@ def load_drivers():
     print(f"Driver records inserted: {rows_loaded}")
 
 def load_constructors():
-    pass
+    constructors = extract_constructors()
+    constructors_df = pd.DataFrame(constructors)
+
+    rows_loaded = load_dataframe_to_table(constructors_df, "staging", "constructors")
+
+    print("\nConstructors Summary:")
+    print(f"Constructor records extracted: {len(constructors)}")
+    print(f"Constructor records inserted: {rows_loaded}")
 
 def load_circuits():
-    pass
+    circuits = extract_cicuits()
+    circuits_df = pd.DataFrame(circuits)
+
+    rows_loaded = load_dataframe_to_table(circuits_df, "staging", "circuits")
+
+    print("\nCircuits Summary:")
+    print(f"Circuit records extracted: {len(circuits)}")
+    print(f"Circuit records inserted: {rows_loaded}")
 
 def main():
     """
@@ -83,7 +101,9 @@ def main():
 
     load_races(start_year = 2010)
     """
-    load_drivers()
+    # load_drivers()
+    # load_constructors()
+    load_circuits()
 
 
 if __name__ == "__main__":
