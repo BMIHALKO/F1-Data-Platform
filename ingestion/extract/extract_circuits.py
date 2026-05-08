@@ -22,7 +22,7 @@ def flatten_circuit(circuit):
         "profile_url": circuit.get("url"),
     }
 
-def extract_cicuits():
+def extract_circuits():
     limit = 100
     offset = 0
 

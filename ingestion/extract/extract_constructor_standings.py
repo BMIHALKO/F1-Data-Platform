@@ -8,12 +8,15 @@ import requests
 
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
 
+def safe_int(value):
+    return int(value) if value not in (None, "") else None
+
 def flatten_constructor_standings(season, standing):
     constructor = standing.get("Constructor", {})
 
     return {
         "season": int(season),
-        "standing_position": int(standing.get("position")),
+        "standing_position": safe_int(standing.get("position")),
         "position_text": standing.get("positionText"),
         "points": standing.get("points"),
         "wins": int(standing.get("wins")),

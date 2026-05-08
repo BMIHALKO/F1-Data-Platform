@@ -9,6 +9,10 @@ import time
 
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
 
+HOURLY_LIMIT = 500
+QUALIFYING_REQUEST_COUNT = 0
+
+
 def flatten_qualifying_results(race, result):
     driver = result.get("Driver", {})
     constructor = result.get("Constructor", {})
@@ -62,21 +66,22 @@ def extract_qualifying(season, round_number):
     ]
 
 def extract_qualifying_for_season(season, rounds):
-    all_qualifying = []
-    request_count = 0
-    hourly_limit = 500
+    global QUALIFYING_REQUEST_COUNT
 
-    for round_number in rounds:
+    all_qualifying = []
+
+    for round_index, round_number in enumerate(rounds, start = 1):
         all_qualifying.extend(
             extract_qualifying(season, round_number)
         )
 
-        request_count += 1
-        remaining = hourly_limit - request_count
+        QUALIFYING_REQUEST_COUNT += 1
+        remaining = HOURLY_LIMIT - QUALIFYING_REQUEST_COUNT
 
         print(
-            f"{season} qualifying request {requests}/{len(rounds)} | "
-            f"Estimated hourly budget remaining: {remaining}"
+            f"{season} qualifying round {round_index}/{len(rounds)} "
+            f"(round) {round_number} | "
+            f"Estimated hourly budget remaining: {remaining}/500"
         )
 
         time.sleep(2)

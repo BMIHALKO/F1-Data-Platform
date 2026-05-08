@@ -5,25 +5,71 @@ from ingestion.extract.extract_results import extract_results
 from ingestion.extract.extract_races import extract_races_for_seasons
 from ingestion.extract.extract_drivers import extract_drivers
 from ingestion.extract.extract_constructors import extract_constructors
-from ingestion.extract.extract_circuits import extract_cicuits
+from ingestion.extract.extract_circuits import extract_circuits
 from ingestion.extract.extract_qualifying import extract_qualifying_for_season
 from ingestion.extract.extract_constructor_standings import extract_constructor_standings_for_seasons
 from ingestion.extract.extract_driver_standings import extract_driver_standings_for_seasons
 
-
 from ingestion.extract.jolpica_client import get_available_rounds, get_available_seasons
 from ingestion.load.postgres_loader import load_dataframe_to_table
 
-request_count = 0
 
-def load_results(start_year = 2010):
-    seasons = get_available_seasons(start_year = start_year)
+START_YEAR = 1950
+END_YEAR = 2009
+REQUEST_DELAY_SECONDS = 2
+
+SECTION_DELAY_SECONDS = 900
+
+RESULTS_START_YEAR = 2001
+QUALIFYING_START_YEAR = 1978
+QUALIFYING_END_YEAR = 1995
+
+CONSTRUCTOR_STANDINGS_START_YEAR = 1950
+CONSTRUCTOR_STANDINGS_END_YEAR = 1959
+
+RUN_RESULTS = False
+RUN_RACES = False
+RUN_DRIVERS = False
+RUN_CONSTRUCTORS = False
+RUN_CIRCUITS = False
+RUN_QUALIFYING = True
+RUN_CONSTRUCTOR_STANDINGS = True
+RUN_DRIVER_STANDINGS = False
+
+
+
+def elapsed_seconds(start_time):
+    return time.time() -  start_time
+
+def get_target_seasons(start_year=START_YEAR, end_year=END_YEAR):
+    return [
+        season
+        for season in get_available_seasons(start_year=start_year)
+        if season <= end_year
+    ]
+
+
+def load_records_to_staging(records, table_name):
+    df = pd.DataFrame(records)
+    return load_dataframe_to_table(df, "staging", table_name)
+
+
+def print_summary(title, extracted_count, inserted_count):
+    print(f"\n{title} Summary:")
+    print(f"Records extracted: {extracted_count}")
+    print(f"Records inserted: {inserted_count}")
+
+
+def load_results():
+    seasons = get_target_seasons(start_year = RESULTS_START_YEAR)
 
     inserted_total = 0
     skipped_existing = 0
     skipped_empty = 0
 
     for season in seasons:
+        season_start_time = time.time()
+
         rounds = get_available_rounds(season)
 
         season_rows = 0
@@ -40,123 +86,201 @@ def load_results(start_year = 2010):
 
             if rows_loaded == 0:
                 skipped_existing += 1
-            
             else:
                 season_rows += rows_loaded
                 season_rounds_loaded += 1
                 inserted_total += rows_loaded
-        
-            time.sleep(2)
-        
-        print(f"{season} results loaded: {season_rows} row across {season_rounds_loaded} rounds.")
-    
+
+            time.sleep(REQUEST_DELAY_SECONDS)
+
+        print(
+            f"{season} Round {round_number} complete | "
+            f"Elapsed: {elapsed_seconds(season_start_time):.1f}s"
+        )
+
     print("\nResults Summary:")
     print(f"Rows inserted: {inserted_total}")
     print(f"Rounds skipped - already loaded: {skipped_existing}")
     print(f"Rounds skipped - no results available: {skipped_empty}")
 
-def load_races(start_year = 2010):
-    seasons = get_available_seasons(start_year = start_year)
+
+def load_races():
+    section_start_time = time.time()
+
+    seasons = get_target_seasons()
 
     races = extract_races_for_seasons(seasons)
-    races_df = pd.DataFrame(races)
-
-    rows_loaded = load_dataframe_to_table(races_df, "staging", "races")
+    rows_loaded = load_records_to_staging(races, "races")
 
     print("\nRaces Summary:")
     print(f"Seasons checked: {seasons}")
     print(f"Race records extracted: {len(races)}")
-    print(f"Race records inserted: {rows_loaded}")
+    print(
+        f"Race records inserted: {rows_loaded} | "
+        f"Elapsed: {elapsed_seconds(section_start_time):.1f}s"
+    )
+
 
 def load_drivers():
+    section_start_time = time.time()
+
     drivers = extract_drivers()
-    drivers_df = pd.DataFrame(drivers)
+    rows_loaded = load_records_to_staging(drivers, "drivers")
 
-    rows_loaded = load_dataframe_to_table(drivers_df, "staging", "drivers")
+    print("Drivers Summary:")
+    print(f"Records extracted: {len(drivers)}")
+    print(
+        f"Drivers inserted: {rows_loaded} | "
+        f"Elapsed: {elapsed_seconds(section_start_time):.1f}s"
+    )
 
-    print("\nDrivers Summary:")
-    print(f"Driver records extracted: {len(drivers)}")
-    print(f"Driver records inserted: {rows_loaded}")
 
 def load_constructors():
+    section_start_time = time.time()
+
     constructors = extract_constructors()
-    constructors_df = pd.DataFrame(constructors)
+    rows_loaded = load_records_to_staging(constructors, "constructors")
 
-    rows_loaded = load_dataframe_to_table(constructors_df, "staging", "constructors")
+    print("Constructors Summary:")
+    print(f"Records extracted: {len(constructors)}")
+    print(
+        f"Constructors inserted: {rows_loaded} | "
+        f"Elapsed: {elapsed_seconds(section_start_time):.1f}s"
+    )
 
-    print("\nConstructors Summary:")
-    print(f"Constructor records extracted: {len(constructors)}")
-    print(f"Constructor records inserted: {rows_loaded}")
 
 def load_circuits():
-    circuits = extract_cicuits()
-    circuits_df = pd.DataFrame(circuits)
+    section_start_time = time.time()
 
-    rows_loaded = load_dataframe_to_table(circuits_df, "staging", "circuits")
+    circuits = extract_circuits()
+    rows_loaded = load_records_to_staging(circuits, "circuits")
 
-    print("\nCircuits Summary:")
-    print(f"Circuit records extracted: {len(circuits)}")
-    print(f"Circuit records inserted: {rows_loaded}")
+    print("Circuits Summary:")
+    print(f"Records extracted: {len(circuits)}")
+    print(
+        f"Circuits inserted: {rows_loaded} | "
+        f"Elapsed: {elapsed_seconds(section_start_time):.1f}s"
+    )
 
-def load_qualifying(start_year = 2010):
-    seasons = get_available_seasons(start_year = start_year)
 
-    total_rows = 0
+def load_qualifying():
+    section_start_time = time.time()
+    
+    seasons = get_target_seasons(start_year = QUALIFYING_START_YEAR, end_year = QUALIFYING_END_YEAR)
+
+    total_extracted = 0
+    total_inserted = 0
 
     for season in seasons:
         rounds = get_available_rounds(season)
 
         qualifying = extract_qualifying_for_season(season, rounds)
-        qualifying_df = pd.DataFrame(qualifying)
+        rows_loaded = load_records_to_staging(qualifying, "qualifying")
 
-        rows_loaded = load_dataframe_to_table(qualifying_df, "staging", "qualifying")
+        total_extracted += len(qualifying)
+        total_inserted += rows_loaded
 
-        total_rows += rows_loaded
+        print(
+            f"{season} qualifying inserted: {rows_loaded} | "
+            f"Elapsed: {elapsed_seconds(section_start_time):.1f}s"
+        )
 
-        print(f"{season} qualifying inserted: {rows_loaded}")
+    print_summary("Qualifying", total_extracted, total_inserted)
+
+
+def load_constructor_standings():
+    section_start_time = time.time()
     
-    print(f"\nTotal qualifying rows inserted: {total_rows}")
-
-def load_constructor_standings(start_year = 2010):
-    seasons = get_available_seasons(start_year = start_year)
+    seasons = get_target_seasons(start_year = CONSTRUCTOR_STANDINGS_START_YEAR, end_year = CONSTRUCTOR_STANDINGS_END_YEAR)
 
     standings = extract_constructor_standings_for_seasons(seasons)
-    standings_df = pd.DataFrame(standings)
-
-    rows_loaded = load_dataframe_to_table(standings_df, "staging", "constructor_standings")
+    rows_loaded = load_records_to_staging(standings, "constructor_standings")
 
     print("\nConstructor Standings Summary:")
     print(f"Records extracted: {len(standings)}")
-    print(f"Records inserted: {rows_loaded}")
+    print(
+        f"Records inserted: {rows_loaded} | "
+        f"Elapsed: {elapsed_seconds(section_start_time):.1f}s"
+    )
 
-def load_driver_standings(start_year = 2010):
-    seasons = get_available_seasons(start_year = start_year)
+
+def load_driver_standings():
+    section_start_time = time.time()
+    
+    seasons = get_target_seasons()
 
     standings = extract_driver_standings_for_seasons(seasons)
-    standings_df = pd.DataFrame(standings)
-
-    rows_loaded = load_dataframe_to_table(standings_df, "staging", "driver_standings")
+    rows_loaded = load_records_to_staging(standings, "driver_standings")
 
     print("\nDriver Standings Summary:")
     print(f"Records extracted: {len(standings)}")
-    print(f"Records inserted: {rows_loaded}")
-
+    print(
+        f"Records inserted: {rows_loaded} | "
+        f"Elapsed: {elapsed_seconds(section_start_time):.1f}s"
+    )
 
 
 def main():
-    """
-    Run only the loads you want active right now
-    
-    load_results(start_year = 2010)
+    print("\n=== Starting Full F1 Staging Pipeline ===")
+    print(f"Target seasons: {START_YEAR} to {END_YEAR}")
 
-    load_races(start_year = 2010)
-    """
-    # load_drivers()
-    # load_constructors()
-    # load_circuits()
-    # load_qualifying()
-    # load_constructor_standings()
-    load_driver_standings()
+    if RUN_RESULTS:
+        print("\n--- Loading Results ---")
+        load_results()
+        print(f"\nSleeping {SECTION_DELAY_SECONDS}s before next section...")
+        time.sleep(SECTION_DELAY_SECONDS)
+    else:
+        print("\n--- Skipping Results ---")
+
+    if RUN_RACES:
+        print("\n--- Loading Races ---")
+        load_races()
+        print(f"\nSleeping {SECTION_DELAY_SECONDS}s before next section...")
+        time.sleep(SECTION_DELAY_SECONDS)
+    else:
+        print("\n--- Skipping Races ---")
+
+    if RUN_DRIVERS:
+        print("\n--- Loading Drivers ---")
+        load_drivers()
+    else:
+        print("\n--- Skipping Drivers ---")
+
+    if RUN_CONSTRUCTORS:
+        print("\n--- Loading Constructors ---")
+        load_constructors()
+    else:
+        print("\n--- Skipping Constructors ---")
+
+    if RUN_CIRCUITS:
+        print("\n--- Loading Circuits ---")
+        load_circuits()
+    else:
+        print("\n--- Skipping Circuits ---")
+
+    if RUN_QUALIFYING:
+        print("\n--- Loading Qualifying ---")
+        load_qualifying()
+        print(f"\nSleeping {SECTION_DELAY_SECONDS}s before next section...")
+        time.sleep(SECTION_DELAY_SECONDS)
+    else:
+        print("\n--- Skipping Qualifying ---")
+
+    if RUN_CONSTRUCTOR_STANDINGS:
+        print("\n--- Loading Constructor Standings ---")
+        load_constructor_standings()
+        print(f"\nSleeping {SECTION_DELAY_SECONDS}s before next section...")
+        time.sleep(SECTION_DELAY_SECONDS)
+    else:
+        print("\n--- Skipping Constructor Standings ---")
+
+    if RUN_DRIVER_STANDINGS:
+        print("\n--- Loading Driver Standings ---")
+        load_driver_standings()
+    else:
+        print("\n--- Skipping Driver Standings ---")
+
+    print("\n=== Pipeline Complete ===")
 
 
 if __name__ == "__main__":
